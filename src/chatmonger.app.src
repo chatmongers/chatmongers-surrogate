@@ -1,0 +1,12 @@
+{application, chatmonger,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { chatmonger_app, []}},
+  {env, []}
+ ]}.
