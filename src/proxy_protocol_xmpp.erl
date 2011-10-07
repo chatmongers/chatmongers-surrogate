@@ -124,7 +124,6 @@ start_authoritative_dialback(Step4,Step8Verify,#proxy_listener{listen_port=Liste
 						{ok,Step7XML,Step7Bin} ->
 							?ERROR_MSG("Got Step7 back: ~n~p~n~p~n",[Step7XML,Step7Bin]),
 							authoritative_dialback_handshake(Step8Verify,ServerSock,PListener,Parser);
-%% 						proxy_connect:bridge_client_server(PListener#proxy_listener.client_sock,ServerSock);
 						Step7Err ->
 							?ERROR_MSG("Step7 Read stream failed in start_authoritative_dialback()~n~p~n",[Step7Err]),
 							ok
@@ -148,9 +147,12 @@ authoritative_dialback_handshake(Step8Verify,ServerSock,PListener,Parser) ->
 	case read_stream(Parser,ServerSock) of
 		{ok,[#xmlel{}=Step9XML|_],Step9Bin} ->
 			?ERROR_MSG("Got Step9 result:~n~p~n~p~n",[Step9XML,Step9Bin]),
+			gen_socket:send(PListener#proxy_listener.client_sock,Step9Bin),
 			case exmpp_xml:get_attribute_as_list(Step9XML,<<"type">>,"") of
-				Step9Type ->
-					?ERROR_MSG("Type: ~p~n",[Step9Type]),
+				<<"valid">> ->
+					proxy_connect:bridge_client_server(PListener#proxy_listener.client_sock,ServerSock);
+				Step9TypeErr ->
+					?ERROR_MSG("Step 9 Type wasn't \"valid\": ~p~n",[Step9TypeErr]),
 					ok
 			end;
 		Step9Err ->
