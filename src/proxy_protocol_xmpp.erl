@@ -124,9 +124,12 @@ start_authoritative_dialback(Step4,Step8Verify,#proxy_listener{listen_port=Liste
 						{ok,Step7XML,Step7Bin} ->
 							?ERROR_MSG("Got Step7 back: ~n~p~n~p~n",[Step7XML,Step7Bin]),
 							authoritative_dialback_handshake(Step8Verify,ServerSock,PListener,Parser);
+						{error,closed} ->
+							?ERROR_MSG("Step7 Read error from authoritative server.",[]),
+							gen_socket:close(PListener#proxy_listener.client_sock);
 						Step7Err ->
 							?ERROR_MSG("Step7 Read stream failed in start_authoritative_dialback()~n~p~n",[Step7Err]),
-							ok
+							gen_socket:close(PListener#proxy_listener.client_sock)
 					end;
 				_ ->
 					gen_socket:close(PListener#proxy_listener.client_sock)
