@@ -1,5 +1,9 @@
 #!/bin/bash
 
+pushd extras
+./build-exmpp.sh
+popd
+
 ./rebar get-deps
 ./rebar update-deps
 ./rebar clean
