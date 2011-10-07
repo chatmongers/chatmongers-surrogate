@@ -151,12 +151,13 @@ authoritative_dialback_handshake([],ServerSock,PListener,_Parser) ->
 	gen_socket:close(ServerSock),
 	gen_socket:close(PListener#proxy_listener.client_sock);
 authoritative_dialback_handshake([Step8Verify|_],ServerSock,PListener,Parser) ->
-	Step8Bin = exmpp_xml:document_to_binary(Step8Verify),
+	Step8Bin = exmpp_xml:document_to_binary(Step8Verify#xmlel{name='db:verify'}),
 	gen_socket:send(ServerSock,Step8Bin),
 	case read_stream(Parser,ServerSock) of
 		{ok,[#xmlel{}=Step9XML|_],Step9Bin} ->
 			?ERROR_MSG("Got Step9 result:~n~p~n~p~n",[Step9XML,Step9Bin]),
-			gen_socket:send(PListener#proxy_listener.client_sock,Step9Bin),
+			Step9Bin2 = exmpp_xml:document_to_binary(Step9XML#xmlel{name='db:result'}),
+			gen_socket:send(PListener#proxy_listener.client_sock,Step9Bin2),
 			case exmpp_xml:get_attribute_as_list(Step9XML,<<"type">>,"") of
 				"valid" ->
 					proxy_connect:bridge_client_server(PListener#proxy_listener.client_sock,ServerSock);
