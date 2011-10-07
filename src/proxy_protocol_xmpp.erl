@@ -63,7 +63,7 @@ handle_protocol(#proxy_listener{listen_port=ListenPort}=PListener) ->
 						case get_declared_ns(Stream,"db") of
 							'jabber:server:dialback' ->
 								?ERROR_MSG("Server dialback on port ~p.",[ListenPort]),
-								start_dialback([Stream|OtherXMPP],Data,PListener);
+								start_dialback([Stream|OtherXMPP],Data,PListener,Parser);
 %% 								XMPP_Err = xmpp_error('other',Stream),
 %% 								gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err);
 							_ ->
@@ -85,7 +85,7 @@ handle_protocol(#proxy_listener{listen_port=ListenPort}=PListener) ->
 	exmpp_xml:stop_parser(Parser),
 	ok.
 
-start_dialback([_Stream|_OtherXMPP]=S,Data,PListener) ->
+start_dialback([_Stream|_OtherXMPP]=S,Data,PListener,Parser) ->
 	random:seed(now()),
 	Step3ID = integer_to_list(random:uniform(100000)),
 	?ERROR_MSG("Starting dialback.~n~p~n~p~n",[S,Data]),
@@ -94,10 +94,17 @@ start_dialback([_Stream|_OtherXMPP]=S,Data,PListener) ->
 			 {'jabber:server:dialback',"db"}],
 	Attr = [#xmlattr{name= <<"id">>,value=list_to_binary(Step3ID)}],
 	Step3Stream = #xmlel{ns='http://etherx.jabber.org/streams',declared_ns=DecNS,name=stream,attrs=Attr},
-	Bin = exmpp_xml:document_to_binary(Step3Stream),
-	?ERROR_MSG("Bin: ~p~n",[Bin]),
-	gen_socket:send(PListener#proxy_listener.client_sock,Bin),
-	ok.
+	Step3Bin = exmpp_xml:document_to_binary(Step3Stream),
+	?ERROR_MSG("Bin: ~p~n",[Step3Bin]),
+	gen_socket:send(PListener#proxy_listener.client_sock,Step3Bin),
+	case read_stream(Parser,PListener#proxy_listener.client_sock) of
+		{ok,Step4XML,Step4BinData} ->
+			?ERROR_MSG("Got Step4:~p~n~p~n",[Step4XML,Step4BinData]),
+			ok;
+		_ ->
+			gen_socket:close(PListener#proxy_listener.client_sock),
+			ok
+	end.
 	
 	
 
