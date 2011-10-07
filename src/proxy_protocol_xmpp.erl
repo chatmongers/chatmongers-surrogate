@@ -59,12 +59,6 @@ handle_protocol(#proxy_listener{listen_port=ListenPort}=PListener) ->
 								?INFO_MSG("XMPP Error: ~p~n~p~n",[Stream,XMPP_Err]),
 								gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err)
 						end;
-					_ when To == "" ->
-						?INFO_MSG("XMPP S2S Error: (port ~p)~n~p~n~p~n",[ListenPort,Stream,OtherXMPP]),
-						More = read_stream(Parser,PListener#proxy_listener.client_sock),
-						?INFO_MSG("Got more: ~p~n",[More]),
-						XMPP_Err = xmpp_error(other,Stream),
-						gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err);
 					_ ->
 						case get_declared_ns(Stream,"db") of
 							'jabber:server:dialback' ->
