@@ -93,7 +93,7 @@ start_dialback([_Stream|_OtherXMPP]=S,Data,PListener,Parser) ->
 			 {'jabber:server',none},
 			 {'jabber:server:dialback',"db"}],
 	Attr = [#xmlattr{name= <<"id">>,value=list_to_binary(Step3ID)}],
-	Step3Stream = #xmlel{ns='http://etherx.jabber.org/streams',declared_ns=DecNS,name=stream,attrs=Attr},
+	Step3Stream = #xmlel{ns='http://etherx.jabber.org/streams',declared_ns=DecNS,name=stream,attrs=Attr,children=undefined},
 	Step3Bin = iolist_to_binary(exmpp_stream:to_iolist(Step3Stream)),
 	?ERROR_MSG("Bin: ~p~n",[Step3Bin]),
 	gen_socket:send(PListener#proxy_listener.client_sock,Step3Bin),
@@ -112,7 +112,7 @@ start_authoritative_dialback(Step4,Step8Verify,#proxy_listener{listen_port=Liste
 			 {'jabber:server:dialback',"db"}],
 	Step6ID = integer_to_list(random:uniform(100000)),
 	Attr = [#xmlattr{name= <<"id">>,value=list_to_binary(Step6ID)}],
-	Step6Stream = #xmlel{ns='http://etherx.jabber.org/streams',declared_ns=DecNS,name=stream,attrs=Attr},
+	Step6Stream = #xmlel{ns='http://etherx.jabber.org/streams',declared_ns=DecNS,name=stream,attrs=Attr,children=undefined},
 	Step6Bin = iolist_to_binary(exmpp_stream:to_iolist(Step6Stream)),
 	To = exmpp_xml:get_attribute_as_list(Step4,<<"to">>,""),
 	case mod_host_pool:get_pool_by_host(To) of
