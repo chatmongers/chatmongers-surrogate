@@ -94,18 +94,69 @@ start_dialback([_Stream|_OtherXMPP]=S,Data,PListener,Parser) ->
 			 {'jabber:server:dialback',"db"}],
 	Attr = [#xmlattr{name= <<"id">>,value=list_to_binary(Step3ID)}],
 	Step3Stream = #xmlel{ns='http://etherx.jabber.org/streams',declared_ns=DecNS,name=stream,attrs=Attr},
-	Step3Bin = exmpp_xml:document_to_binary(Step3Stream),
+	Step3Bin = iolist_to_binary(exmpp_stream:to_iolist(Step3Stream)),
 	?ERROR_MSG("Bin: ~p~n",[Step3Bin]),
 	gen_socket:send(PListener#proxy_listener.client_sock,Step3Bin),
 	case read_stream(Parser,PListener#proxy_listener.client_sock) of
-		{ok,Step4XML,Step4BinData} ->
-			?ERROR_MSG("Got Step4:~p~n~p~n",[Step4XML,Step4BinData]),
-			ok;
+		{ok,[Step4Result|VerifyXML],Step4BinData} ->
+			?ERROR_MSG("Got Step4:~p~n~p~n",[Step4Result,Step4BinData]),
+			start_authoritative_dialback(Step4Result,VerifyXML,PListener,Parser);
 		_ ->
 			gen_socket:close(PListener#proxy_listener.client_sock),
 			ok
 	end.
 	
+start_authoritative_dialback(Step4,Step8Verify,#proxy_listener{listen_port=ListenPort}=PListener,Parser) ->
+	DecNS = [{'http://etherx.jabber.org/streams',"stream"},
+			 {'jabber:server',none},
+			 {'jabber:server:dialback',"db"}],
+	Step6Stream = #xmlel{ns='http://etherx.jabber.org/streams',declared_ns=DecNS,name=stream,attrs=[]},
+	Step6Bin = iolist_to_binary(exmpp_stream:to_iolist(Step6Stream)),
+	To = exmpp_xml:get_attribute_as_list(Step4,<<"to">>,""),
+	case mod_host_pool:get_pool_by_host(To) of
+		{ok,Pool} ->
+			TargetList = [{pool,Pool,ListenPort,3}],
+			?INFO_MSG("Connect to server ~p via ~p~n",[To,TargetList]),
+			case proxy_protocol:tcp_connect(TargetList) of
+				{ok,ServerSock} ->
+					gen_socket:send(ServerSock,Step6Bin),
+					case read_stream(Parser,ServerSock) of
+						{ok,Step7XML,Step7Bin} ->
+							?ERROR_MSG("Got Step7 back: ~n~p~n~p~n",[Step7XML,Step7Bin]),
+							authoritative_dialback_handshake(Step8Verify,ServerSock,PListener,Parser);
+%% 						proxy_connect:bridge_client_server(PListener#proxy_listener.client_sock,ServerSock);
+						Step7Err ->
+							?ERROR_MSG("Step7 Read stream failed in start_authoritative_dialback()~n~p~n",[Step7Err]),
+							ok
+					end;
+				_ ->
+					gen_socket:close(PListener#proxy_listener.client_sock)
+			end;
+		_ ->
+			gen_socket:close(PListener#proxy_listener.client_sock)
+	end.
+
+authoritative_dialback_handshake([],ServerSock,PListener,_Parser) ->
+	?ERROR_MSG("Verify messages normally come from the originator of the connection!  Failing!",[]),
+%% 	XMPP_Err = xmpp_error(other,Stream),
+%% 	gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err);
+	gen_socket:close(ServerSock),
+	gen_socket:close(PListener#proxy_listener.client_sock);
+authoritative_dialback_handshake(Step8Verify,ServerSock,PListener,Parser) ->
+	Step8Bin = exmpp_xml:document_to_binary(Step8Verify),
+	gen_socket:send(ServerSock,Step8Bin),
+	case read_stream(Parser,ServerSock) of
+		{ok,[#xmlel{}=Step9XML|_],Step9Bin} ->
+			?ERROR_MSG("Got Step9 result:~n~p~n~p~n",[Step9XML,Step9Bin]),
+			case exmpp_xml:get_attribute_as_list(Step9XML,<<"type">>,"") of
+				Step9Type ->
+					?ERROR_MSG("Type: ~p~n",[Step9Type]),
+					ok
+			end;
+		Step9Err ->
+			?ERROR_MSG("Step9 Read stream failed:~n~p~n",[Step9Err]),
+			ok
+	end.
 	
 
 get_declared_ns(#xmlel{declared_ns=DeclNS},Type) ->
