@@ -158,8 +158,6 @@ authoritative_dialback_handshake([Step8Verify|_],ServerSock,PListener,Parser) ->
 			?ERROR_MSG("Got Step9 result:~n~p~n~p~n",[Step9XML,Step9Bin]),
 			gen_socket:send(PListener#proxy_listener.client_sock,Step9Bin),
 			case exmpp_xml:get_attribute_as_list(Step9XML,<<"type">>,"") of
-				<<"valid">> ->
-					proxy_connect:bridge_client_server(PListener#proxy_listener.client_sock,ServerSock);
 				"valid" ->
 					proxy_connect:bridge_client_server(PListener#proxy_listener.client_sock,ServerSock);
 				Step9TypeErr ->
