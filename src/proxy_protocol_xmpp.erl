@@ -110,7 +110,9 @@ start_authoritative_dialback(Step4,Step8Verify,#proxy_listener{listen_port=Liste
 	DecNS = [{'http://etherx.jabber.org/streams',"stream"},
 			 {'jabber:server',none},
 			 {'jabber:server:dialback',"db"}],
-	Step6Stream = #xmlel{ns='http://etherx.jabber.org/streams',declared_ns=DecNS,name=stream,attrs=[]},
+	Step6ID = integer_to_list(random:uniform(100000)),
+	Attr = [#xmlattr{name= <<"id">>,value=list_to_binary(Step6ID)}],
+	Step6Stream = #xmlel{ns='http://etherx.jabber.org/streams',declared_ns=DecNS,name=stream,attrs=Attr},
 	Step6Bin = iolist_to_binary(exmpp_stream:to_iolist(Step6Stream)),
 	To = exmpp_xml:get_attribute_as_list(Step4,<<"to">>,""),
 	case mod_host_pool:get_pool_by_host(To) of
@@ -119,7 +121,7 @@ start_authoritative_dialback(Step4,Step8Verify,#proxy_listener{listen_port=Liste
 			?INFO_MSG("Connect to server ~p via ~p~n",[To,TargetList]),
 			case proxy_protocol:tcp_connect(TargetList) of
 				{ok,ServerSock} ->
-					?ERROR_MSG("Sending Step6:~n~p~n",[Step6Bin]),
+					?ERROR_MSG("Sending Step6:~n~p~n~p~n",[Step6Stream,Step6Bin]),
 					gen_socket:send(ServerSock,Step6Bin),
 					case read_stream(Parser,ServerSock) of
 						{ok,Step7XML,Step7Bin} ->
