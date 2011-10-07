@@ -9,6 +9,8 @@
 
 -include("surrogate.hrl").
 
+-include_lib("exmpp/include/exmpp.hrl").
+
 %%
 %% Exported Functions
 %%
@@ -42,7 +44,6 @@ handle_protocol(#proxy_listener{listen_port=ListenPort}=PListener) ->
 		case read_stream(Parser,PListener#proxy_listener.client_sock) of
 			{ok,[Stream|OtherXMPP],Data} ->
 				To = exmpp_xml:get_attribute_as_list(Stream,<<"to">>,""),
-%% 				?ERROR_MSG("Got open stream for ~p:~n~p~n~p~n",[To,Data,Stream]),
 				case mod_host_pool:get_pool_by_host(To) of
 					{ok,Pool} ->
 						TargetList = [{pool,Pool,ListenPort,3}],
@@ -65,10 +66,17 @@ handle_protocol(#proxy_listener{listen_port=ListenPort}=PListener) ->
 						XMPP_Err = xmpp_error(other,Stream),
 						gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err);
 					_ ->
-						%% On unknown host implement host-unknown RFC6120 4.9.3.6
-						XMPP_Err = xmpp_error('host-unknown',Stream),
-						?INFO_MSG("XMPP Error connecting to unknown host: ~p (port ~p)~n~p~n~p~n",[To,ListenPort,Stream,OtherXMPP]),
-						gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err)
+						case get_declared_ns(Stream,"db") of
+							'jabber:server:dialback' ->
+								?ERROR_MSG("Server dialback not supported on port ~p!~n~p~n",[ListenPort,[Stream|OtherXMPP]]),
+								XMPP_Err = xmpp_error('other',Stream),
+								gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err);
+							_ ->
+								%% On unknown host implement host-unknown RFC6120 4.9.3.6
+								XMPP_Err = xmpp_error('host-unknown',Stream),
+								?INFO_MSG("XMPP Error connecting to unknown host: ~p (port ~p)~n~p~n~p~n",[To,ListenPort,Stream,OtherXMPP]),
+								gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err)
+						end
 				end;
 			Err ->
 				?ERROR_MSG("Error reading xmpp stream: ~p~n",[Err]),
@@ -82,6 +90,15 @@ handle_protocol(#proxy_listener{listen_port=ListenPort}=PListener) ->
 	exmpp_xml:stop_parser(Parser),
 	ok.
 
+get_declared_ns(#xmlel{declared_ns=DeclNS},Type) ->
+	get_declared_ns2(DeclNS,Type).
+
+get_declared_ns2([],_Type) ->
+	undefined;
+get_declared_ns2([{NSName,NsType}|_R],Type) when Type==NsType ->
+	NSName;
+get_declared_ns2([{_NSName,_NsType}|R],Type) ->
+	get_declared_ns2(R,Type).
 %%
 %% Local Functions
 %%
