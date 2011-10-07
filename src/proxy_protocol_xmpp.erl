@@ -101,7 +101,7 @@ start_dialback([_Stream|_OtherXMPP]=S,Data,PListener,Parser) ->
 		{ok,[Step4Result],Step4BinData} ->
 			?ERROR_MSG("Got Step4, but it didn't include a verify message!~n~p~n~p~n",[Step4Result,Step4BinData]),
 			gen_socket:close(PListener#proxy_listener.client_sock);
-		{ok,[Step4Result|Step8Verify0],Step4BinData} ->
+		{ok,[Step4Result,Step8Verify0|_],Step4BinData} ->
 			?ERROR_MSG("Got Step4:~p~n~p~n",[Step4Result,Step4BinData]),
 			Step8Verify = Step8Verify0#xmlel{name='db:verify'},
 			start_authoritative_dialback(Step4Result,Step8Verify,PListener,Parser);
