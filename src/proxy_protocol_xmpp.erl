@@ -62,9 +62,10 @@ handle_protocol(#proxy_listener{listen_port=ListenPort}=PListener) ->
 					_ ->
 						case get_declared_ns(Stream,"db") of
 							'jabber:server:dialback' ->
-								?ERROR_MSG("Server dialback not supported on port ~p!~n~p~n",[ListenPort,[Stream|OtherXMPP]]),
-								XMPP_Err = xmpp_error('other',Stream),
-								gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err);
+								?ERROR_MSG("Server dialback on port ~p.",[ListenPort]),
+								start_dialback([Stream|OtherXMPP],Data,PListener);
+%% 								XMPP_Err = xmpp_error('other',Stream),
+%% 								gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err);
 							_ ->
 								%% On unknown host implement host-unknown RFC6120 4.9.3.6
 								XMPP_Err = xmpp_error('host-unknown',Stream),
@@ -83,6 +84,22 @@ handle_protocol(#proxy_listener{listen_port=ListenPort}=PListener) ->
 	end,
 	exmpp_xml:stop_parser(Parser),
 	ok.
+
+start_dialback([_Stream|_OtherXMPP]=S,Data,PListener) ->
+	random:seed(now()),
+	Step3ID = integer_to_list(random:uniform(100000)),
+	?ERROR_MSG("Starting dialback.~n~p~n~p~n",[S,Data]),
+	DecNS = [{'http://etherx.jabber.org/streams',"stream"},
+			 {'jabber:server',none},
+			 {'jabber:server:dialback',"db"}],
+	Attr = [#xmlattr{name= <<"id">>,value=list_to_binary(Step3ID)}],
+	Step3Stream = #xmlel{ns='http://etherx.jabber.org/streams',declared_ns=DecNS,name=stream,attrs=Attr},
+	Bin = exmpp_xml:document_to_binary(Step3Stream),
+	?ERROR_MSG("Bin: ~p~n",[Bin]),
+	gen_socket:send(PListener#proxy_listener.client_sock,Bin),
+	ok.
+	
+	
 
 get_declared_ns(#xmlel{declared_ns=DeclNS},Type) ->
 	get_declared_ns2(DeclNS,Type).
