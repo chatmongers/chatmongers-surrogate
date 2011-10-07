@@ -106,7 +106,9 @@ start_dialback([_Stream|_OtherXMPP]=S,Data,PListener,Parser) ->
 			ok
 	end.
 	
-start_authoritative_dialback(Step4,Step8Verify,#proxy_listener{listen_port=ListenPort}=PListener,Parser) ->
+start_authoritative_dialback(Step4,Step8Verify,#proxy_listener{listen_port=ListenPort}=PListener,ClientParser) ->
+	%% New parser for server side connection.
+	Parser = exmpp_xml:start_parser([{root_depth,1}]),
 	DecNS = [{'http://etherx.jabber.org/streams',"stream"},
 			 {'jabber:server',none},
 			 {'jabber:server:dialback',"db"}],
@@ -139,7 +141,8 @@ start_authoritative_dialback(Step4,Step8Verify,#proxy_listener{listen_port=Liste
 			end;
 		_ ->
 			gen_socket:close(PListener#proxy_listener.client_sock)
-	end.
+	end,
+	exmpp_xml:stop_parser(Parser).
 
 authoritative_dialback_handshake([],ServerSock,PListener,_Parser) ->
 	?ERROR_MSG("Verify messages normally come from the originator of the connection!  Failing!",[]),
