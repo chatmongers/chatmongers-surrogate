@@ -160,6 +160,8 @@ authoritative_dialback_handshake([Step8Verify|_],ServerSock,PListener,Parser) ->
 			case exmpp_xml:get_attribute_as_list(Step9XML,<<"type">>,"") of
 				<<"valid">> ->
 					proxy_connect:bridge_client_server(PListener#proxy_listener.client_sock,ServerSock);
+				"valid" ->
+					proxy_connect:bridge_client_server(PListener#proxy_listener.client_sock,ServerSock);
 				Step9TypeErr ->
 					?ERROR_MSG("Step 9 Type wasn't \"valid\": ~p~n",[Step9TypeErr]),
 					ok
