@@ -39,7 +39,7 @@ handle_protocol(#proxy_listener{listen_port=ListenPort}=PListener) ->
 	Parser = exmpp_xml:start_parser([{root_depth,1}]),
 	try
 		case read_stream(Parser,PListener#proxy_listener.client_sock) of
-			{ok,[Stream|_],Data} ->
+			{ok,[Stream|OtherXMPP],Data} ->
 				To = exmpp_xml:get_attribute_as_list(Stream,<<"to">>,""),
 %% 				?ERROR_MSG("Got open stream for ~p:~n~p~n~p~n",[To,Data,Stream]),
 				case mod_host_pool:get_pool_by_host(To) of
@@ -61,7 +61,7 @@ handle_protocol(#proxy_listener{listen_port=ListenPort}=PListener) ->
 						%% On unknown host implement host-unknown RFC6120 4.9.3.6
 						XMPP_Err = xmpp_error('host-unknown',Stream),
 						
-						?INFO_MSG("XMPP Error connecting to unknown host: ~p (port ~p)~n~p~n",[To,ListenPort,Stream]),
+						?INFO_MSG("XMPP Error connecting to unknown host: ~p (port ~p)~n~p~n~p~n",[To,ListenPort,Stream,OtherXMPP]),
 						gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err)
 				end;
 			Err ->
