@@ -119,6 +119,7 @@ start_authoritative_dialback(Step4,Step8Verify,#proxy_listener{listen_port=Liste
 			?INFO_MSG("Connect to server ~p via ~p~n",[To,TargetList]),
 			case proxy_protocol:tcp_connect(TargetList) of
 				{ok,ServerSock} ->
+					?ERROR_MSG("Sending Step6:~n~p~n",[Step6Bin]),
 					gen_socket:send(ServerSock,Step6Bin),
 					case read_stream(Parser,ServerSock) of
 						{ok,Step7XML,Step7Bin} ->
