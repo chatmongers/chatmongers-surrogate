@@ -34,6 +34,7 @@ proxy_mod_stop(_Opts) ->
 % remote-connection-failed (see notes below)
 % host-unknown (see notes below)
 % system-shutdown (Use while disabling a server for maintenance which can include moving clusters)
+% Does not prperly handle dialback protocol http://www.ietf.org/rfc/rfc3920.txt
 
 handle_protocol(#proxy_listener{listen_port=ListenPort}=PListener) ->
 	Parser = exmpp_xml:start_parser([{root_depth,1}]),
@@ -57,10 +58,15 @@ handle_protocol(#proxy_listener{listen_port=ListenPort}=PListener) ->
 								?INFO_MSG("XMPP Error: ~p~n~p~n",[Stream,XMPP_Err]),
 								gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err)
 						end;
+					_ when To == "" ->
+						?INFO_MSG("XMPP S2S Error: (port ~p)~n~p~n~p~n",[To,ListenPort,Stream,OtherXMPP]),
+						More = read_stream(Parser,PListener#proxy_listener.client_sock),
+						?INFO_MSG("Got more: ~p~n",[More]),
+						XMPP_Err = xmpp_error(other,Stream),
+						gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err);
 					_ ->
 						%% On unknown host implement host-unknown RFC6120 4.9.3.6
 						XMPP_Err = xmpp_error('host-unknown',Stream),
-						
 						?INFO_MSG("XMPP Error connecting to unknown host: ~p (port ~p)~n~p~n~p~n",[To,ListenPort,Stream,OtherXMPP]),
 						gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err)
 				end;
