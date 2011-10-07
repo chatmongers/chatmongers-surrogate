@@ -145,7 +145,7 @@ authoritative_dialback_handshake([],ServerSock,PListener,_Parser) ->
 %% 	gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err);
 	gen_socket:close(ServerSock),
 	gen_socket:close(PListener#proxy_listener.client_sock);
-authoritative_dialback_handshake(Step8Verify,ServerSock,PListener,Parser) ->
+authoritative_dialback_handshake([Step8Verify|_],ServerSock,PListener,Parser) ->
 	Step8Bin = exmpp_xml:document_to_binary(Step8Verify),
 	gen_socket:send(ServerSock,Step8Bin),
 	case read_stream(Parser,ServerSock) of
