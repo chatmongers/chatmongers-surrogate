@@ -82,9 +82,9 @@ http_api(["dns",Domain],#http_admin{method='GET'}= _Request,_Conf) -> %% when Re
 	ARecs = get_a_records(Domain),
 	?ERROR_MSG("Srv records: ~p~n",[ARecs]),
 	Json = {struct,[{"srv",SrvRecs},{"a",ARecs}]},
-	{200,[{"Content-Type","application/json"}],iolist_to_binary(mochijson2:encode(Json))};
+	{200,[{"Content-Type","application/json"}],iolist_to_binary(mjson:encode(Json))};
 http_api(["dns",Domain],#http_admin{method='POST'}= Request,_Conf) -> %% when Request#http_admin.has_auth == true
-	DnsRecs = parse_dns_json(mochijson2:decode(Request#http_admin.body)),
+	DnsRecs = parse_dns_json(mjson:decode(Request#http_admin.body)),
 	UpdRecs = make_dns_updates(DnsRecs),
 	UpdateTxt = ["update delete ",Domain," A\n","update delete _xmpp-client._tcp.",Domain," SRV\n",UpdRecs,"send\nanswer\n"],
 	UpdateBin = iolist_to_binary(UpdateTxt),
@@ -93,7 +93,7 @@ http_api(["dns",Domain],#http_admin{method='POST'}= Request,_Conf) -> %% when Re
 	R = os:cmd("nsupdate "++TFile), 
 	?ERROR_MSG("Post DNS record ~p: ~p~n~s~n~p~n",[Domain,DnsRecs,binary_to_list(UpdateBin),R]),
 	JsonOut = {struct,[{"result",iolist_to_binary(R)}]},
-	{200,[{"Content-Type","application/json"}],iolist_to_binary(mochijson2:encode(JsonOut))};
+	{200,[{"Content-Type","application/json"}],iolist_to_binary(mjson:encode(JsonOut))};
 http_api(Path,Request,_Conf) when Request#http_admin.has_auth == true ->
 	Err = io_lib:format("Not found in ~p: ~p~n",[?MODULE,Path]),
 	{404,[{'Content-type',"text/plain"}],iolist_to_binary(Err)};
