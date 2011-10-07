@@ -35,7 +35,7 @@ proxy_mod_stop(_Opts) ->
 % host-unknown (see notes below)
 % system-shutdown (Use while disabling a server for maintenance which can include moving clusters)
 
-handle_protocol(PListener) ->
+handle_protocol(#proxy_listener{listen_port=ListenPort}=PListener) ->
 	Parser = exmpp_xml:start_parser([{root_depth,1}]),
 	try
 		case read_stream(Parser,PListener#proxy_listener.client_sock) of
@@ -44,7 +44,7 @@ handle_protocol(PListener) ->
 %% 				?ERROR_MSG("Got open stream for ~p:~n~p~n~p~n",[To,Data,Stream]),
 				case mod_host_pool:get_pool_by_host(To) of
 					{ok,Pool} ->
-						TargetList = [{pool,Pool,5222,3}],
+						TargetList = [{pool,Pool,ListenPort,3}],
 						?INFO_MSG("Connect to server ~p via ~p~n",[To,TargetList]),
 						
 						case proxy_protocol:tcp_connect(TargetList) of
@@ -60,7 +60,8 @@ handle_protocol(PListener) ->
 					_ ->
 						%% On unknown host implement host-unknown RFC6120 4.9.3.6
 						XMPP_Err = xmpp_error('host-unknown',Stream),
-						?INFO_MSG("XMPP Error connecting to unknown host: ~p~n",[To]),
+						
+						?INFO_MSG("XMPP Error connecting to unknown host: ~p (port ~p)~n",[To,ListenPort]),
 						gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err)
 				end;
 			Err ->
