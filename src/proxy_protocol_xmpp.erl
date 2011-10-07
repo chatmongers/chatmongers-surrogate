@@ -98,9 +98,10 @@ start_dialback([_Stream|_OtherXMPP]=S,Data,PListener,Parser) ->
 	?ERROR_MSG("Bin: ~p~n",[Step3Bin]),
 	gen_socket:send(PListener#proxy_listener.client_sock,Step3Bin),
 	case read_stream(Parser,PListener#proxy_listener.client_sock) of
-		{ok,[Step4Result|VerifyXML],Step4BinData} ->
+		{ok,[Step4Result|_ExtraXML],Step4BinData} ->
 			?ERROR_MSG("Got Step4:~p~n~p~n",[Step4Result,Step4BinData]),
-			start_authoritative_dialback(Step4Result,VerifyXML,PListener,Parser);
+			Step8Verify = Step4Result#xmlel{name='db:verify'},
+			start_authoritative_dialback(Step4Result,Step8Verify,PListener,Parser);
 		_ ->
 			gen_socket:close(PListener#proxy_listener.client_sock),
 			ok
@@ -144,14 +145,10 @@ start_authoritative_dialback(Step4,Step8Verify,#proxy_listener{listen_port=Liste
 	end,
 	exmpp_xml:stop_parser(Parser).
 
-authoritative_dialback_handshake([],ServerSock,PListener,_Parser) ->
-	?ERROR_MSG("Verify messages normally come from the originator of the connection!  Failing!",[]),
-%% 	XMPP_Err = xmpp_error(other,Stream),
-%% 	gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err);
-	gen_socket:close(ServerSock),
-	gen_socket:close(PListener#proxy_listener.client_sock);
-authoritative_dialback_handshake([Step8Verify|_],ServerSock,PListener,Parser) ->
-	Step8Bin = exmpp_xml:document_to_binary(Step8Verify#xmlel{name='db:verify'}),
+authoritative_dialback_handshake(Step8Verify0,ServerSock,PListener,Parser) ->
+	Step8ID = integer_to_list(random:uniform(100000)),
+	Step8Verify = exmpp_xml:set_attribute(Step8Verify0,<<"id">>,list_to_binary(Step8ID)),
+	Step8Bin = exmpp_xml:document_to_binary(Step8Verify),
 	gen_socket:send(ServerSock,Step8Bin),
 	case read_stream(Parser,ServerSock) of
 		{ok,[#xmlel{}=Step9XML|_],Step9Bin} ->
