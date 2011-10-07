@@ -61,7 +61,7 @@ handle_protocol(#proxy_listener{listen_port=ListenPort}=PListener) ->
 						%% On unknown host implement host-unknown RFC6120 4.9.3.6
 						XMPP_Err = xmpp_error('host-unknown',Stream),
 						
-						?INFO_MSG("XMPP Error connecting to unknown host: ~p (port ~p)~n",[To,ListenPort]),
+						?INFO_MSG("XMPP Error connecting to unknown host: ~p (port ~p)~n~p~n",[To,ListenPort,Stream]),
 						gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err)
 				end;
 			Err ->
