@@ -99,8 +99,13 @@ start_dialback([_Stream|_OtherXMPP]=S,Data,PListener,Parser) ->
 	gen_socket:send(PListener#proxy_listener.client_sock,Step3Bin),
 	case read_stream(Parser,PListener#proxy_listener.client_sock) of
 		{ok,[Step4Result],Step4BinData} ->
-			?ERROR_MSG("Got Step4, but it didn't include a verify message!~n~p~n~p~n",[Step4Result,Step4BinData]),
-			gen_socket:close(PListener#proxy_listener.client_sock);
+			Step8Verify0 = Step4Result#xmlel{name='db:verify'},
+			From = exmpp_xml:get_attribute_as_binary(Step8Verify0,<<"from">>,<<>>),
+			To = exmpp_xml:get_attribute_as_binary(Step8Verify0,<<"to">>,<<>>),
+			Step8Verify1 = exmpp_xml:set_attribute(Step8Verify0,<<"from">>,To),
+			Step8Verify2 = exmpp_xml:set_attribute(Step8Verify1,<<"to">>,From),
+			?ERROR_MSG("Got Step4, but it didn't include a verify message!  Building one to try:~n~p~n~p~n",[Step8Verify2,Step4BinData]),
+			start_authoritative_dialback(Step4Result,Step8Verify2,PListener,Parser);
 		{ok,[Step4Result,Step8Verify0|_],Step4BinData} ->
 			?ERROR_MSG("Got Step4:~p~n~p~n",[Step4Result,Step4BinData]),
 			Step8Verify = Step8Verify0#xmlel{name='db:verify'},
