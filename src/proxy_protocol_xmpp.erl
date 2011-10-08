@@ -131,7 +131,7 @@ dialback_connect_recv(#dialback{dialbackxml=[Step4|_]}=DBState,#proxy_listener{l
 					case read_stream(Parser,ServerSock) of
 						{ok,RecvStreamXML2,RecvStreamBin2} ->
 							?ERROR_MSG("Connected to receiving server.~n~p~n~p~n",[RecvStreamXML2,RecvStreamBin2]),
-							gen_socket:send(ServerSock,DBState#dialback.dialbackxml),
+							gen_socket:send(ServerSock,DBState#dialback.dialbackbin),
 							proxy_connect:bridge_client_server(PListener#proxy_listener.client_sock,ServerSock);
 						RecvStreamErr ->
 							?ERROR_MSG("Error when reading stream from receiving server.~n~p~n",[RecvStreamErr])
