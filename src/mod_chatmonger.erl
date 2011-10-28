@@ -77,13 +77,13 @@ get_a_records(Domain) ->
 			[]
 	end.
 
-http_api(["dns",Domain],#http_admin{method='GET'}= _Request,_Conf) -> %% when Request#http_admin.has_auth == true
+http_api(["dns",Domain],#http_admin{method='GET'}= Request,_Conf) when Request#http_admin.has_auth == true ->
 	SrvRecs = get_srv_records(Domain),
 	ARecs = get_a_records(Domain),
 	?ERROR_MSG("Srv records: ~p~n",[ARecs]),
 	Json = {struct,[{"srv",SrvRecs},{"a",ARecs}]},
 	{200,[{"Content-Type","application/json"}],iolist_to_binary(mjson:encode(Json))};
-http_api(["dns",Domain],#http_admin{method='POST'}= Request,_Conf) -> %% when Request#http_admin.has_auth == true
+http_api(["dns",Domain],#http_admin{method='POST'}= Request,_Conf) when Request#http_admin.has_auth == true ->
 	DnsRecs = parse_dns_json(mjson:decode(Request#http_admin.body)),
 	UpdRecs = make_dns_updates(DnsRecs),
 	UpdateTxt = ["update delete ",Domain," A\n","update delete _xmpp-client._tcp.",Domain," SRV\n",UpdRecs,"send\nanswer\n"],
@@ -92,6 +92,15 @@ http_api(["dns",Domain],#http_admin{method='POST'}= Request,_Conf) -> %% when Re
 	file:write_file(TFile,UpdateBin),
 	R = os:cmd("nsupdate "++TFile), 
 	?ERROR_MSG("Post DNS record ~p: ~p~n~s~n~p~n",[Domain,DnsRecs,binary_to_list(UpdateBin),R]),
+	JsonOut = {struct,[{"result",iolist_to_binary(R)}]},
+	{200,[{"Content-Type","application/json"}],iolist_to_binary(mjson:encode(JsonOut))};
+http_api(["dns",Domain],#http_admin{method='DELETE'}= Request,_Conf) when Request#http_admin.has_auth == true -> 
+	UpdateTxt = ["update delete ",Domain," A\n","update delete _xmpp-client._tcp.",Domain," SRV\n","send\nanswer\n"],
+	UpdateBin = iolist_to_binary(UpdateTxt),
+	TFile = "/tmp/mongerdns-"++Domain, 
+	file:write_file(TFile,UpdateBin),
+	R = os:cmd("nsupdate "++TFile), 
+	?ERROR_MSG("Delete DNS record ~p: ~s~n~p~n",[Domain,binary_to_list(UpdateBin),R]),
 	JsonOut = {struct,[{"result",iolist_to_binary(R)}]},
 	{200,[{"Content-Type","application/json"}],iolist_to_binary(mjson:encode(JsonOut))};
 http_api(Path,Request,_Conf) when Request#http_admin.has_auth == true ->
