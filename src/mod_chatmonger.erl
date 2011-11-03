@@ -55,10 +55,9 @@ get_srv_records(Domain) ->
 		{ok,#dns_rec{header=#dns_header{qr=true},anlist=Response}} ->
 			?ERROR_MSG("Got dns: ~p~n",[Response]),
 			[ {struct,
-			   [{"name",list_to_binary(Name)},{"priority",list_to_binary(integer_to_list(Priority))},
-				{"weight",list_to_binary(integer_to_list(Weight))},
-				{"port",list_to_binary(integer_to_list(Port))},{"host",list_to_binary(Host)}]} 
-			|| #dns_rr{domain = Name,data={Priority,Weight,Port,Host}} <- Response];
+			   [{"name",list_to_binary(Name)},{"priority",Priority},{"weight",Weight},
+				{"port",Port},{"host",list_to_binary(Host)}]}
+			|| #dns_rr{domain = Name,data={Priority,Weight,Port,Host},type=srv} <- Response];
 		Other ->
 			?ERROR_MSG("Other response: ~p~n",[Other]),
 			[]
@@ -71,7 +70,7 @@ get_a_records(Domain) ->
 			[ {struct,
 			   [{"name",list_to_binary(Name)},
 				{"addr",list_to_binary(proxylib:format_inet(AddrTup))}]}
-			|| #dns_rr{domain=Name,data=AddrTup} <- Response];
+			|| #dns_rr{domain=Name,data=AddrTup,type=a} <- Response];
 		Other ->
 			?ERROR_MSG("Other response: ~p~n",[Other]),
 			[]
@@ -215,10 +214,16 @@ parse_dns_json_srv2([],Acc) ->
 	Acc;
 parse_dns_json_srv2([{<<"name">>,NameBin}|R],Acc) ->
 	parse_dns_json_srv2(R,Acc#dns_srv{name=binary_to_list(NameBin)});
+parse_dns_json_srv2([{<<"priority">>,Int}|R],Acc) when is_integer(Int) ->
+	parse_dns_json_srv2(R,Acc#dns_srv{priority=integer_to_list(Int)});
 parse_dns_json_srv2([{<<"priority">>,Bin}|R],Acc) ->
 	parse_dns_json_srv2(R,Acc#dns_srv{priority=binary_to_list(Bin)});
+parse_dns_json_srv2([{<<"weight">>,Int}|R],Acc) when is_integer(Int) ->
+	parse_dns_json_srv2(R,Acc#dns_srv{weight=integer_to_list(Int)});
 parse_dns_json_srv2([{<<"weight">>,Bin}|R],Acc) ->
 	parse_dns_json_srv2(R,Acc#dns_srv{weight=binary_to_list(Bin)});
+parse_dns_json_srv2([{<<"port">>,Int}|R],Acc) when is_integer(Int) ->
+	parse_dns_json_srv2(R,Acc#dns_srv{port=integer_to_list(Int)});
 parse_dns_json_srv2([{<<"port">>,Bin}|R],Acc) ->
 	parse_dns_json_srv2(R,Acc#dns_srv{port=binary_to_list(Bin)});
 parse_dns_json_srv2([{<<"host">>,Bin}|R],Acc) ->
