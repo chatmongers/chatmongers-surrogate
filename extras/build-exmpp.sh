@@ -44,6 +44,6 @@ if [ ! -d exmpp-0.9.8 ]; then
 	autoreconf -i
 	./configure
 	make
-	make install
+	sudo make install
 fi
 
