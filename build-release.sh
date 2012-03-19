@@ -1,9 +1,7 @@
 #!/bin/bash
 
 pushd extras
-if [ ! -d exmpp-0.9.8 ]; then
 ./build-exmpp.sh
-fi
 popd
 
 ./rebar get-deps
