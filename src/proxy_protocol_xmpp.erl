@@ -75,6 +75,9 @@ handle_protocol(#proxy_listener{listen_port=ListenPort}=PListener) ->
 								gen_socket:send(PListener#proxy_listener.client_sock,XMPP_Err)
 						end
 				end;
+			{error, closed} ->
+				%% This case is caused by the load balancer health check.
+				ok;
 			Err ->
 				?ERROR_MSG("Error reading xmpp stream: ~p~n",[Err]),
 				ok
